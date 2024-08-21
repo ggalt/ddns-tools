@@ -20,6 +20,7 @@ import os
 import sys
 import requests
 import dns.resolver
+from datetime import datetime
 
 logging.basicConfig(format='%(levelname)s: %(message)s')
 
@@ -55,15 +56,19 @@ def get_dns_ip(name=None, target='A'):
     bits = name.split('.')
     while bits:
         try:
-            ns = str(dns.resolver.query('.'.join(bits), 'NS')[0])
+#            ns = str(dns.resolver.query('.'.join(bits), 'NS')[0])
+            ns = str(dns.resolver.resolve('.'.join(bits), 'NS')[0])
         except:
             bits.pop(0)
         else:
             ns = socket.gethostbyname(ns)
             resolver = dns.resolver.Resolver()
             resolver.nameservers = [ns]
-            q = resolver.query(name, target)
+#            q = resolver.query(name, target)
+            q = resolver.resolve(name, target)
             ip = str(q[0]).strip()
+            # logger.debug("Updated IP:", ip)
+            # print( NOW, "Updated IP Address:", ip)
             return ip
     error('Could not get the authoritative name server for {0}.'.format(name))
 
@@ -100,6 +105,8 @@ UPDATE_IP_URL = settings.get('UPDATE_IP_URL',
                              'https://cp.dnsmadeeasy.com/servlet/updateip')
 LOG_LEVEL = settings.get('LOG_LEVEL', 'INFO')
 
+NOW = datetime.now()
+
 for opt in 'USERNAME', 'PASSWORD', 'RECORD_ID', 'RECORD_NAME':
     if not locals().get(opt):
         error('Missing `{0}` setting. Check `settings.json` file.'.format(opt))
@@ -113,11 +120,13 @@ except AttributeError:
 if __name__ == '__main__':
     current_ip = get_current_ip()
     if current_ip:
-        if current_ip != get_dns_ip():
+        dns_ip = get_dns_ip()
+        if current_ip != dns_ip:
             logger.debug('Current IP differs with DNS record, attempting to '
                          'update DNS.')
             request = update_ip_to_dns(current_ip)
             if request and request.text == 'success':
+                print( NOW, "IP address change.  Old IP:", dns_ip, "New IP:", current_ip)
                 logger.info('Updating record for {0} to {1} was '
                             'succesful.'.format(RECORD_NAME, current_ip))
             else:
