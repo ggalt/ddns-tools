@@ -56,7 +56,6 @@ def get_dns_ip(name=None, target='A'):
     bits = name.split('.')
     while bits:
         try:
-#            ns = str(dns.resolver.query('.'.join(bits), 'NS')[0])
             ns = str(dns.resolver.resolve('.'.join(bits), 'NS')[0])
         except:
             bits.pop(0)
@@ -64,7 +63,6 @@ def get_dns_ip(name=None, target='A'):
             ns = socket.gethostbyname(ns)
             resolver = dns.resolver.Resolver()
             resolver.nameservers = [ns]
-#            q = resolver.query(name, target)
             q = resolver.resolve(name, target)
             ip = str(q[0]).strip()
             # logger.debug("Updated IP:", ip)
