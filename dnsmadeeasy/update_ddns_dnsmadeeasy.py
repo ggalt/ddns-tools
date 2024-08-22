@@ -22,7 +22,13 @@ import requests
 import dns.resolver
 from datetime import datetime
 
-logging.basicConfig(format='%(levelname)s: %(message)s')
+#logging.basicConfig(format='%(levelname)s: %(message)s')
+logging.basicConfig(
+    level=logging.INFO,                   # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Format for log messages
+    filename='ddns_log.txt',          # File to write log messages to
+    filemode='a'                           # Mode to open the log file: 'a' for append, 'w' for overwrite
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +40,11 @@ def error(message):
     logger.error(message)
     sys.exit(1)
 
+def check_log_date(my_ip):
+    file_path = 'logs/log.txt'
+    modification_time = os.path.getmtime(file_path)
+    if (NOW.timestamp() - modification_time) > ONE_WEEK:
+        logger.info(NOW, "Current IP is:", my_ip)
 
 def check_ssl(url):
     try:
@@ -102,8 +113,8 @@ GET_IP_URL = settings.get('GET_IP_URL', 'http://myip.dnsmadeeasy.com')
 UPDATE_IP_URL = settings.get('UPDATE_IP_URL',
                              'https://cp.dnsmadeeasy.com/servlet/updateip')
 LOG_LEVEL = settings.get('LOG_LEVEL', 'INFO')
-
 NOW = datetime.now()
+ONE_WEEK = 604800
 
 for opt in 'USERNAME', 'PASSWORD', 'RECORD_ID', 'RECORD_NAME':
     if not locals().get(opt):
@@ -124,12 +135,13 @@ if __name__ == '__main__':
                          'update DNS.')
             request = update_ip_to_dns(current_ip)
             if request and request.text == 'success':
-                print( NOW, "IP address change.  Old IP:", dns_ip, "New IP:", current_ip)
+                # print( NOW, "IP address change.  Old IP:", dns_ip, "New IP:", current_ip)
                 logger.info('Updating record for {0} to {1} was '
                             'succesful.'.format(RECORD_NAME, current_ip))
             else:
                 error('Updating record for {0} to {1} failed.'.format(
                     RECORD_NAME, current_ip))
         else:
+            check_log_date(current_ip)
             logger.debug(
                 'No changes for DNS record {0} to report.'.format(RECORD_NAME))
